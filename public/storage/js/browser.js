@@ -101,7 +101,7 @@ function createTab(url = store.homepage) {
     try {
       const doc = frame.frame.contentDocument;
       if (doc && (doc.title.includes("Just a moment") || doc.title.includes("Checking your browser"))) {
-        frame.frame.src = "/static/google-embed.html#" + encodeURIComponent(tab.url);
+        frame.frame.src = "/static/google-embed.html#" + tab.url;
       }
     } catch (e) {}
   };
