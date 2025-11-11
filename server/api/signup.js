@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 export async function signupHandler(req, res) {
   const { email, password, school, age } = req.body;
   
-  if (!email || password) {
+  if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 

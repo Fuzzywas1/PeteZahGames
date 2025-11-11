@@ -164,6 +164,11 @@ app.get("/results/:query", async (req, res) => {
   }
 });
 
+// Helper to check if user is owner
+function isOwner(user) {
+  return user && user.is_admin === 1 && user.email === process.env.ADMIN_EMAIL;
+}
+
 app.post("/api/signup", signupHandler);
 app.post("/api/signin", signinHandler);
 app.post('/api/admin/user-action', adminUserActionHandler);
@@ -202,6 +207,15 @@ app.get("/api/profile", (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+    // Return correct role for frontend: Owner, Admin, Staff, or User
+    let role = 'User';
+    if (user.is_admin === 1 && user.email === process.env.ADMIN_EMAIL) {
+      role = 'Owner';
+    } else if (user.is_admin === 3) {
+      role = 'Admin';
+    } else if (user.is_admin === 2) {
+      role = 'Staff';
+    }
     return res.status(200).json({ user: {
       id: user.id,
       email: user.email,
@@ -212,7 +226,8 @@ app.get("/api/profile", (req, res) => {
       },
       app_metadata: {
         provider: 'email',
-        is_admin: user.is_admin === 1
+        is_admin: user.is_admin,
+        role
       }
     }});
   } catch (error) {
@@ -424,8 +439,9 @@ app.get("/api/admin/users", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.session.user.id);
-    if (!user || !user.is_admin) {
+    const user = db.prepare('SELECT is_admin, email FROM users WHERE id = ?').get(req.session.user.id);
+    // Allow owner (is_admin === 1 && email matches), admin (is_admin === 3), or staff (is_admin === 2) to access admin area
+    if (!user || !(user.is_admin === 1 && user.email === process.env.ADMIN_EMAIL || user.is_admin === 2 || user.is_admin === 3)) {
       return res.status(403).json({ error: "Admin access required" });
     }
     const users = db.prepare(`
@@ -434,12 +450,11 @@ app.get("/api/admin/users", (req, res) => {
       ORDER BY created_at DESC
       LIMIT 100
     `).all();
-    // Optionally, join with a sessions or logs table to get last IP, or store IP on signup
-    // For now, add a placeholder for IP and signup link
     const usersWithExtras = users.map(u => ({
       ...u,
-      ip: null, // TODO: populate from session/logs if available
-      signup_link: null // TODO: store or infer if available
+      ip: null,
+      signup_link: null,
+      role: (u.is_admin === 1 && u.email === process.env.ADMIN_EMAIL) ? 'Owner' : (u.is_admin === 3 ? 'Admin' : (u.is_admin === 2 ? 'Staff' : 'User'))
     }));
     return res.status(200).json({ users: usersWithExtras });
   } catch (error) {

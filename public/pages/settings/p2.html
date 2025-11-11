@@ -454,7 +454,9 @@
         
         if (response.ok) {
           userData = data.user;
-          isAdmin = data.user.app_metadata?.is_admin || false;
+          // Use role from backend for admin area access
+          const role = data.user.app_metadata?.role;
+          isAdmin = role === 'Owner' || role === 'Admin' || role === 'Staff';
           
           document.getElementById('email-display').textContent = data.user.email;
           document.getElementById('username').value = data.user.user_metadata?.name || '';
@@ -522,13 +524,22 @@
             if (filtered.length > 0) {
               list.innerHTML = filtered.map(user => {
                 const date = new Date(user.created_at);
+                // Show role: Owner, Admin, Staff, or User
+                let role = '';
+                if (user.is_admin === 1 && user.email === (window.lastAdminUsers && window.lastAdminUsers[0] && window.lastAdminUsers[0].email ? window.lastAdminUsers[0].email : '')) {
+                  role = '<span style="color:#fbbf24">Owner</span>';
+                } else if (user.is_admin === 3) {
+                  role = '<span style="color:#3b82f6">Admin</span>';
+                } else if (user.is_admin === 2) {
+                  role = '<span style="color:#8b5cf6">Staff</span>';
+                }
                 return `
                   <div class="user-item">
                     <img src="${user.avatar_url || '/storage/images/main/profile.png'}" alt="Profile" style="width:40px;height:40px;border-radius:50%;margin-right:12px;object-fit:cover;">
                     <div class="info">
                       <div class="email"><b>${user.username || 'No username'}</b> <span style="color:#99aabb;font-size:0.8em;">(${user.email})</span></div>
                       <div class="meta">
-                        Joined: ${date.toLocaleDateString()} • School: ${user.school || 'N/A'} • Age: ${user.age || 'N/A'} • ${user.is_admin ? 'Admin' : ''}
+                        Joined: ${date.toLocaleDateString()} • School: ${user.school || 'N/A'} • Age: ${user.age || 'N/A'} ${role}
                         <br>IP: ${user.ip || 'N/A'}
                       </div>
                     </div>
@@ -557,6 +568,15 @@
       currentAdminUserId = userId;
       const modal = document.getElementById('admin-user-modal');
       const content = document.getElementById('admin-user-modal-content');
+      // Show role in modal: Owner, Admin, Staff, or User
+      let role = '';
+      if (user.is_admin === 1 && user.email === (window.lastAdminUsers && window.lastAdminUsers[0] && window.lastAdminUsers[0].email ? window.lastAdminUsers[0].email : '')) {
+        role = '<span style="color:#fbbf24">Owner</span>';
+      } else if (user.is_admin === 3) {
+        role = '<span style="color:#3b82f6">Admin</span>';
+      } else if (user.is_admin === 2) {
+        role = '<span style="color:#8b5cf6">Staff</span>';
+      }
       content.innerHTML = `
         <div style='display:flex;align-items:center;gap:12px;margin-bottom:10px;'>
           <img src="${user.avatar_url || '/storage/images/main/profile.png'}" alt="Profile" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
@@ -565,7 +585,7 @@
             <span style='color:#99aabb;font-size:0.9em;'>${user.email}</span>
           </div>
         </div>
-        <div style='color:#99aabb;font-size:0.95em;'>School: ${user.school || 'N/A'}<br>Age: ${user.age || 'N/A'}<br>Joined: ${new Date(user.created_at).toLocaleDateString()}<br>IP: ${user.ip || 'N/A'}<br>${user.is_admin ? '<span style=\'color:#3b82f6\'>Admin</span>' : ''}</div>
+        <div style='color:#99aabb;font-size:0.95em;'>School: ${user.school || 'N/A'}<br>Age: ${user.age || 'N/A'}<br>Joined: ${new Date(user.created_at).toLocaleDateString()}<br>IP: ${user.ip || 'N/A'}<br>${role}</div>
       `;
       modal.style.display = 'flex';
     };
