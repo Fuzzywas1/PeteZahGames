@@ -151,7 +151,7 @@ If you would like to use one of the following buttons to deploy
 
 ## So... our codebase is really horrible
 
-We plan to cleaen things up in the future, but for now here is a simple list of things to know:
+We plan to clean things up in the future, but for now here is a simple list of things to know:
 
 - Most routes are in the `/public/` folder (especially pages)
 - If you need to find the exact route of a page use dev tools to find the iFrame's source:
