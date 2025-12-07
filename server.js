@@ -40,6 +40,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = "public";
 
+// Fallback so it doesn't crash if env var is missing
+const SESSION_SECRET = process.env.SESSION_SECRET || "change-me-in-prod";
+
 const bare = createBareServer("/bare/", {
   requestOptions: {
     agent: false,
@@ -150,7 +153,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false },
@@ -324,24 +327,22 @@ app.get("/api/profile", (req, res) => {
     } else if (user.is_admin === 2) {
       role = "Staff";
     }
-    return res
-      .status(200)
-      .json({
-        user: {
-          id: user.id,
-          email: user.email,
-          user_metadata: {
-            name: user.username,
-            bio: user.bio,
-            avatar_url: user.avatar_url,
-          },
-          app_metadata: {
-            provider: "email",
-            is_admin: user.is_admin,
-            role,
-          },
+    return res.status(200).json({
+      user: {
+        id: user.id,
+        email: user.email,
+        user_metadata: {
+          name: user.username,
+          bio: user.bio,
+          avatar_url: user.avatar_url,
         },
-      });
+        app_metadata: {
+          provider: "email",
+          is_admin: user.is_admin,
+          role,
+        },
+      },
+    });
   } catch (error) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -400,9 +401,7 @@ app.get("/api/load-localstorage", (req, res) => {
     const result = db
       .prepare("SELECT localstorage_data FROM user_settings WHERE user_id = ?")
       .get(req.session.user.id);
-    return res
-      .status(200)
-      .json({ data: result?.localstorage_data || "{}" });
+    return res.status(200).json({ data: result?.localstorage_data || "{}" });
   } catch (error) {
     console.error("Load error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -485,9 +484,7 @@ app.post("/api/changelog", (req, res) => {
     db.prepare(
       "INSERT INTO changelog (id, title, content, author_id, created_at) VALUES (?, ?, ?, ?, ?)"
     ).run(id, title, content, req.session.user.id, now);
-    return res
-      .status(201)
-      .json({ message: "Changelog created", id });
+    return res.status(201).json({ message: "Changelog created", id });
   } catch (error) {
     console.error("Changelog create error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -510,9 +507,7 @@ app.post("/api/feedback", (req, res) => {
     db.prepare(
       "INSERT INTO feedback (id, user_id, content, created_at) VALUES (?, ?, ?, ?)"
     ).run(id, req.session.user.id, content.trim(), now);
-    return res
-      .status(201)
-      .json({ message: "Feedback submitted", id });
+    return res.status(201).json({ message: "Feedback submitted", id });
   } catch (error) {
     console.error("Feedback error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -795,9 +790,6 @@ server.on("upgrade", (req, socket, head) => {
     socket.destroy();
   }
 });
-
-// In my serverside config I rewrite /api/bare-premium/ and /api/wisp-premium/ to go to a bare/wisp servers from non-flagged ip datacenters to allow for cloudflare/google protected sites to work.
-// If you are self hosting, this will not apply to you, and google/youtube/cloudflare protected sites will probably not work unless you run this on a non-flagged ip.
 
 // IMPORTANT for Cloud Run: default to 8080
 const port = parseInt(process.env.PORT || "8080", 10);
